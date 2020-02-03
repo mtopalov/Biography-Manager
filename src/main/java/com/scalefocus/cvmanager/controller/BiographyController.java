@@ -1,7 +1,8 @@
 package com.scalefocus.cvmanager.controller;
 
 import com.scalefocus.cvmanager.exception.BiographyNotFoundException;
-import com.scalefocus.cvmanager.model.Biography;
+import com.scalefocus.cvmanager.exception.WrongFormatException;
+import com.scalefocus.cvmanager.model.biography.Biography;
 import com.scalefocus.cvmanager.service.BiographyService;
 import org.json.simple.JSONObject;
 import org.springframework.http.HttpStatus;
@@ -38,18 +39,13 @@ public class BiographyController {
 
     @GetMapping("/{id}")
     public ResponseEntity<JSONObject> findById(@PathVariable Long id) throws BiographyNotFoundException {
-        return ResponseEntity.ok(service.findById(id));
+        Biography biography = service.findById(id);
+        return ResponseEntity.ok(service.asJsonObject(biography));
     }
 
     //DELETE MAPPINGS
-    @DeleteMapping("/")
-    public ResponseEntity<Object> deleteAll() {
-        service.deleteAll();
-        return ResponseEntity.ok("All biographies deleted!");
-    }
-
     @DeleteMapping("/{id}")
-    public ResponseEntity<Object> deleteById(@PathVariable Long id) {
+    public ResponseEntity<Object> deleteById(@PathVariable Long id) throws BiographyNotFoundException {
         service.deleteById(id);
         return ResponseEntity.ok("Biography with ID " + id + " deleted!");
     }
@@ -60,19 +56,11 @@ public class BiographyController {
         return new ResponseEntity<>(service.save(biography), HttpStatus.CREATED);
     }
 
-    @PostMapping("/{id}/pdf")
-    public ResponseEntity<Object> toPdf(@PathVariable Long id) throws BiographyNotFoundException {
+    @PostMapping("/{id}/{format}")
+    public ResponseEntity<Object> toDesiredFileFormat(@PathVariable Long id, @PathVariable String format) throws BiographyNotFoundException, WrongFormatException {
+        service.toDesiredFileFormat(id, format);
 
-        service.biographyToPdf(id);
-
-        return ResponseEntity.ok("Biography converted to pdf successfully!");
+        return ResponseEntity.ok("Biography successfully converted to " + format + "!");
     }
 
-    @PostMapping("/{id}/word")
-    public ResponseEntity<Object> toWord(@PathVariable Long id) throws BiographyNotFoundException {
-
-        service.biographyToWord(id);
-
-        return ResponseEntity.ok("Biography converted to word successfully!");
-    }
 }

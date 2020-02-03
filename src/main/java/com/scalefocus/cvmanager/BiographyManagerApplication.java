@@ -9,5 +9,6 @@ public class BiographyManagerApplication {
     public static void main(String[] args) {
         SpringApplication.run(BiographyManagerApplication.class, args);
     }
-
 }
+
+

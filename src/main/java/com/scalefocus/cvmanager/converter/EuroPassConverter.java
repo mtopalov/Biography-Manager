@@ -1,24 +1,24 @@
 package com.scalefocus.cvmanager.converter;
 
-import com.scalefocus.cvmanager.model.Address;
-import com.scalefocus.cvmanager.model.Biography;
-import com.scalefocus.cvmanager.model.Date;
-import com.scalefocus.cvmanager.model.Headline;
-import com.scalefocus.cvmanager.model.Period;
-import com.scalefocus.cvmanager.model.education.Education;
-import com.scalefocus.cvmanager.model.education.Organisation;
-import com.scalefocus.cvmanager.model.identification.ContactInfo;
-import com.scalefocus.cvmanager.model.identification.Country;
-import com.scalefocus.cvmanager.model.identification.Demographics;
-import com.scalefocus.cvmanager.model.identification.Identification;
-import com.scalefocus.cvmanager.model.identification.PersonName;
-import com.scalefocus.cvmanager.model.identification.Photo;
-import com.scalefocus.cvmanager.model.skill.ForeignLanguage;
-import com.scalefocus.cvmanager.model.skill.LinguisticSkills;
-import com.scalefocus.cvmanager.model.skill.ProficiencyLevel;
-import com.scalefocus.cvmanager.model.skill.Skills;
-import com.scalefocus.cvmanager.model.workexperience.Employer;
-import com.scalefocus.cvmanager.model.workexperience.WorkExperience;
+import com.scalefocus.cvmanager.model.biography.Address;
+import com.scalefocus.cvmanager.model.biography.Biography;
+import com.scalefocus.cvmanager.model.biography.Date;
+import com.scalefocus.cvmanager.model.biography.Headline;
+import com.scalefocus.cvmanager.model.biography.Period;
+import com.scalefocus.cvmanager.model.biography.education.Education;
+import com.scalefocus.cvmanager.model.biography.education.Organisation;
+import com.scalefocus.cvmanager.model.biography.identification.ContactInfo;
+import com.scalefocus.cvmanager.model.biography.identification.Country;
+import com.scalefocus.cvmanager.model.biography.identification.Demographics;
+import com.scalefocus.cvmanager.model.biography.identification.Identification;
+import com.scalefocus.cvmanager.model.biography.identification.PersonName;
+import com.scalefocus.cvmanager.model.biography.identification.Photo;
+import com.scalefocus.cvmanager.model.biography.skill.ForeignLanguage;
+import com.scalefocus.cvmanager.model.biography.skill.LinguisticSkills;
+import com.scalefocus.cvmanager.model.biography.skill.ProficiencyLevel;
+import com.scalefocus.cvmanager.model.biography.skill.Skills;
+import com.scalefocus.cvmanager.model.biography.workexperience.Employer;
+import com.scalefocus.cvmanager.model.biography.workexperience.WorkExperience;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.springframework.stereotype.Component;
@@ -35,6 +35,16 @@ import java.util.stream.Collectors;
 @SuppressWarnings("unchecked")
 @Component
 public class EuroPassConverter {
+
+    private static final String LABEL = "Label";
+
+    private static final String CONTACT = "Contact";
+
+    private static final String ADDRESS = "Address";
+
+    private static final String CONTACT_INFO = "ContactInfo";
+
+    private static final String DESCRIPTION = "Description";
 
     /**
      * Converts the {@link Biography}, given as argument, to the required by the Europass REST API {@link JSONObject} and returns it.
@@ -103,7 +113,7 @@ public class EuroPassConverter {
         JSONObject result = new JSONObject();
 
         result.put("Code", country.getCode());
-        result.put("Label", country.getLabel());
+        result.put(LABEL, country.getLabel());
 
         return result;
     }
@@ -123,7 +133,7 @@ public class EuroPassConverter {
         contact.put("Municipality", address.getMunicipality());
         contact.put("Country", convertCountry(address.getCountry()));
 
-        result.put("Contact", contact);
+        result.put(CONTACT, contact);
 
         return result;
     }
@@ -138,16 +148,16 @@ public class EuroPassConverter {
         JSONObject result = new JSONObject();
 
         JSONObject email = new JSONObject();
-        email.put("Contact", contactInfo.getEmail());
+        email.put(CONTACT, contactInfo.getEmail());
 
         JSONArray telephones = new JSONArray();
         for (String telephone : contactInfo.getTelephones()) {
             JSONObject phone = new JSONObject();
-            phone.put("Contact", telephone);
+            phone.put(CONTACT, telephone);
             telephones.add(phone);
         }
 
-        result.put("Address", convertAddress(contactInfo.getAddress()));
+        result.put(ADDRESS, convertAddress(contactInfo.getAddress()));
         result.put("Email", email);
         result.put("Telephone", telephones);
 
@@ -169,7 +179,7 @@ public class EuroPassConverter {
         birthDate.put("Day", demographics.getBirthDate().getDay());
 
         JSONObject gender = new JSONObject();
-        gender.put("Label", demographics.getGender());
+        gender.put(LABEL, demographics.getGender());
 
         result.put("Birthdate", birthDate);
         result.put("Gender", gender);
@@ -202,7 +212,7 @@ public class EuroPassConverter {
         JSONObject result = new JSONObject();
 
         result.put("PersonName", convertPersonName(identification.getPersonName()));
-        result.put("ContactInfo", convertContactInfo(identification.getContactInfo()));
+        result.put(CONTACT_INFO, convertContactInfo(identification.getContactInfo()));
         result.put("Demographics", convertDemographics(identification.getDemographics()));
         result.put("Photo", convertPhoto(identification.getPhoto()));
 
@@ -221,13 +231,13 @@ public class EuroPassConverter {
         JSONObject result = new JSONObject();
 
         JSONObject type = new JSONObject();
-        type.put("Label", headline.getType());
+        type.put(LABEL, headline.getType());
 
         JSONObject description = new JSONObject();
-        description.put("Label", headline.getDescription());
+        description.put(LABEL, headline.getDescription());
 
         result.put("Type", type);
-        result.put("Description", description);
+        result.put(DESCRIPTION, description);
         return result;
     }
 
@@ -289,7 +299,7 @@ public class EuroPassConverter {
      */
     private JSONObject convertPosition(WorkExperience workExperience) {
         JSONObject result = new JSONObject();
-        result.put("Label", workExperience.getPosition());
+        result.put(LABEL, workExperience.getPosition());
         return result;
     }
 
@@ -302,10 +312,10 @@ public class EuroPassConverter {
     private JSONObject convertEmployer(Employer employer) {
         JSONObject result = new JSONObject();
         JSONObject contactInfo = new JSONObject();
-        contactInfo.put("Address", convertAddress(employer.getAddress()));
+        contactInfo.put(ADDRESS, convertAddress(employer.getAddress()));
 
         result.put("Name", employer.getName());
-        result.put("ContactInfo", contactInfo);
+        result.put(CONTACT_INFO, contactInfo);
 
         return result;
     }
@@ -337,10 +347,10 @@ public class EuroPassConverter {
         JSONObject result = new JSONObject();
 
         JSONObject contactInfo = new JSONObject();
-        contactInfo.put("Address", convertAddress(organisation.getAddress()));
+        contactInfo.put(ADDRESS, convertAddress(organisation.getAddress()));
 
         result.put("Name", organisation.getName());
-        result.put("ContactInfo", contactInfo);
+        result.put(CONTACT_INFO, contactInfo);
 
         return result;
     }
@@ -391,9 +401,9 @@ public class EuroPassConverter {
         JSONArray result = new JSONArray();
         for (String language : motherLanguages) {
             JSONObject label = new JSONObject();
-            label.put("Label", language);
+            label.put(LABEL, language);
             JSONObject desc = new JSONObject();
-            desc.put("Description", label);
+            desc.put(DESCRIPTION, label);
             result.add(desc);
         }
         return result;
@@ -411,11 +421,11 @@ public class EuroPassConverter {
 
         for (ForeignLanguage language : foreignLanguages) {
             JSONObject label = new JSONObject();
-            label.put("Label", language.getDescription());
+            label.put(LABEL, language.getDescription());
 
             JSONObject foreignLanguage = new JSONObject();
 
-            foreignLanguage.put("Description", label);
+            foreignLanguage.put(DESCRIPTION, label);
             foreignLanguage.put("ProficiencyLevel", convertProficiencyLevel(language.getProficiencyLevel()));
             foreignLanguage.put("Certificate", convertCertificates(language.getCertificates()));
             result.add(foreignLanguage);
@@ -465,7 +475,7 @@ public class EuroPassConverter {
      */
     private JSONObject convertOtherSkills(String skill) {
         JSONObject result = new JSONObject();
-        result.put("Description", skill);
+        result.put(DESCRIPTION, skill);
         return result;
     }
 
@@ -478,7 +488,10 @@ public class EuroPassConverter {
      */
     private JSONObject convertDrivingSkills(List<String> drivingSkills) {
         JSONObject result = new JSONObject();
-        result.put("Description", drivingSkills);
+        result.put(DESCRIPTION, drivingSkills);
         return result;
     }
 }
+
+
+

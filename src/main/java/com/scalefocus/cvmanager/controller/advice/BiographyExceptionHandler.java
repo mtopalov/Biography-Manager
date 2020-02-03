@@ -2,6 +2,8 @@ package com.scalefocus.cvmanager.controller.advice;
 
 import com.scalefocus.cvmanager.exception.BadRequestException;
 import com.scalefocus.cvmanager.exception.BiographyNotFoundException;
+import com.scalefocus.cvmanager.exception.WrongFormatException;
+import com.scalefocus.cvmanager.model.error.BaseErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -12,6 +14,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import javax.validation.ConstraintViolation;
 import javax.validation.ConstraintViolationException;
+import java.nio.file.AccessDeniedException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -24,20 +27,20 @@ import java.util.stream.Collectors;
 @ControllerAdvice
 public class BiographyExceptionHandler {
 
-    private static final String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+    private final String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
 
     @ExceptionHandler(BiographyNotFoundException.class)
     public ResponseEntity<Object> handleBiographyNotFound(BiographyNotFoundException ex) {
         String message = ex.getMessage();
-        BaseErrorResponse response = new BaseErrorResponse(timestamp, HttpStatus.NOT_FOUND, 404, message, message);
-        return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+        BaseErrorResponse response = new BaseErrorResponse(timestamp, HttpStatus.NOT_FOUND, message, message);
+        return new ResponseEntity<>(response, response.getStatus());
     }
 
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<Object> handleBadRequest(BadRequestException ex) {
         String message = ex.getMessage();
         String error = ex.getCause().getMessage();
-        BaseErrorResponse response = new BaseErrorResponse(timestamp, HttpStatus.BAD_REQUEST, 400, message, error);
+        BaseErrorResponse response = new BaseErrorResponse(timestamp, HttpStatus.BAD_REQUEST, message, error);
         return new ResponseEntity<>(response, response.getStatus());
     }
 
@@ -53,19 +56,26 @@ public class BiographyExceptionHandler {
                 .distinct()
                 .reduce("", (a, b) -> a + b);
 
-        BaseErrorResponse response = new BaseErrorResponse(timestamp, HttpStatus.BAD_REQUEST, 400, message, errors);
+        BaseErrorResponse response = new BaseErrorResponse(timestamp, HttpStatus.BAD_REQUEST, message, errors);
         return new ResponseEntity<>(response, response.getStatus());
+    }
+
+    @ExceptionHandler(WrongFormatException.class)
+    public ResponseEntity<Object> handleWrongFormat(WrongFormatException ex) {
+        String message = ex.getMessage();
+        BaseErrorResponse response = new BaseErrorResponse(timestamp, HttpStatus.BAD_REQUEST, message, message);
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<Object> handleHttpMessageNotReadable(HttpMessageNotReadableException ex) {
         String message = ex.getMessage();
-        BaseErrorResponse response = new BaseErrorResponse(timestamp, HttpStatus.BAD_REQUEST, 400, message, message);
+        BaseErrorResponse response = new BaseErrorResponse(timestamp, HttpStatus.BAD_REQUEST, message, message);
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex) {
+    public ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex) {
         List<String> errors = new ArrayList<>();
         ex.getBindingResult().getFieldErrors()
                 .forEach(error -> errors.add(error.getField() + ": " + error.getDefaultMessage()));
@@ -76,7 +86,14 @@ public class BiographyExceptionHandler {
                 .map(FieldError::getField)
                 .reduce("", (acc, newError) -> acc + newError + " ,");
 
-        BaseErrorResponse response = new BaseErrorResponse(timestamp, HttpStatus.BAD_REQUEST, 400, message, errors);
+        BaseErrorResponse response = new BaseErrorResponse(timestamp, HttpStatus.BAD_REQUEST, message, errors);
         return new ResponseEntity<>(response, response.getStatus());
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Object> handleAccessDeniedException(AccessDeniedException ex) {
+        String message = ex.getMessage();
+        BaseErrorResponse response = new BaseErrorResponse(timestamp, HttpStatus.FORBIDDEN, message, message);
+        return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
     }
 }

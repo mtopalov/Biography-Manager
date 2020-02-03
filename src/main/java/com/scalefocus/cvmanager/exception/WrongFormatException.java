@@ -3,9 +3,9 @@ package com.scalefocus.cvmanager.exception;
 /**
  * @author Mariyan Topalov
  */
-public class BadRequestException extends Exception {
+public class WrongFormatException extends Exception {
 
-    public BadRequestException(String message) {
+    public WrongFormatException(String message) {
         super(message);
     }
 }

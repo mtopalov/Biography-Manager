@@ -31,6 +31,8 @@ build/
 .vscode/
 
 ### Custom files
-cv.pdf
 cvmanager.iml
-default-image.jpg
+*.jpg
+*.doc
+*.pdf
+*.xml

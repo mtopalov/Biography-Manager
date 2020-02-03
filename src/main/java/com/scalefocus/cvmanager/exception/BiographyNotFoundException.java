@@ -5,16 +5,7 @@ package com.scalefocus.cvmanager.exception;
  */
 public class BiographyNotFoundException extends Exception {
 
-    private final String message;
-
-
     public BiographyNotFoundException(String message) {
-        this.message = message;
+        super(message);
     }
-
-    @Override
-    public String getMessage() {
-        return message;
-    }
-
 }

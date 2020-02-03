@@ -2,11 +2,14 @@ package com.scalefocus.cvmanager.service;
 
 import com.scalefocus.cvmanager.converter.EuroPassConverter;
 import com.scalefocus.cvmanager.exception.BiographyNotFoundException;
-import com.scalefocus.cvmanager.model.Biography;
+import com.scalefocus.cvmanager.exception.WrongFormatException;
+import com.scalefocus.cvmanager.model.biography.Biography;
 import com.scalefocus.cvmanager.repository.BiographyRepository;
-import com.sun.org.apache.xerces.internal.impl.dv.util.Base64;
 import org.apache.commons.io.IOUtils;
 import org.json.simple.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -17,6 +20,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -25,6 +30,12 @@ import java.util.stream.Collectors;
  */
 @Service
 public class BiographyService {
+
+    private static final Logger logger = LoggerFactory.getLogger(BiographyService.class);
+
+    private static final String BASE_URL = "https://europass.cedefop.europa.eu/rest/v1/document/to/";
+
+    private final List<String> availableFormats = Arrays.asList("word", "xml", "pdf");
 
     private final BiographyRepository repository;
 
@@ -36,6 +47,13 @@ public class BiographyService {
     }
 
     //GET MAPPINGS
+
+    /**
+     * Retrieves all {@link Biography} records from the database, converts them to {@link JSONObject}, using the {@link EuroPassConverter}
+     * and returns them as {@link List}.
+     *
+     * @return all {@link Biography} records from the database, converted from {@code List<Biography>} to {@code List<JSONObject>}.
+     */
     public List<JSONObject> findAll() {
         List<Biography> biographies = repository.findAll();
         return biographies.stream()
@@ -43,64 +61,138 @@ public class BiographyService {
                 .collect(Collectors.toList());
     }
 
-    public JSONObject findById(Long id) throws BiographyNotFoundException {
+    /**
+     * Finds the {@link Biography} that corresponds to the given {@link Long} id, given as parameter, and returns it as {@link JSONObject}.
+     * Throws {@link BiographyNotFoundException} if no biography with the given id exist.
+     *
+     * @param id the id to be searched for
+     * @return the biography that corresponds to the given id, converted to json object
+     *
+     * @throws BiographyNotFoundException if no biography with given id was found.
+     */
+    public Biography findById(Long id) throws BiographyNotFoundException {
         return repository.findById(id)
-                .map(converter::toJsonObject)
                 .orElseThrow(() -> new BiographyNotFoundException("There's no biography with that id!"));
     }
 
     //DELETE MAPPINGS
-    public void deleteAll() {
-        repository.deleteAll();
-    }
 
-    public void deleteById(Long id) {
-        repository.deleteById(id);
+    /**
+     * Deletes a single {@link Biography} from the database by id, given as argument.
+     *
+     * @param id the biography with that id will be deleted.
+     */
+    public void deleteById(Long id) throws BiographyNotFoundException {
+        try {
+            repository.deleteById(id);
+        } catch (EmptyResultDataAccessException ex) {
+            throw new BiographyNotFoundException("No biography with id " + id + " exists!");
+        }
     }
 
     //POST MAPPINGS
     public JSONObject save(Biography biography) throws IOException {
-        byte[] imageAsByteArray;
-        String encodedImage;
-        String inputPath = biography.getIdentification().getPhoto().getData();
-
-        try (InputStream inputStream = new URL(inputPath).openStream()) {
-            imageAsByteArray = IOUtils.toByteArray(inputStream);
-        } catch (MalformedURLException exception) {
-            imageAsByteArray = Files.readAllBytes(Paths.get("default-image.jpg"));
-        }
-        encodedImage = Base64.encode(imageAsByteArray);
-
+        String imagePath = biography.getIdentification().getPhoto().getData();
+        byte[] image = getBytesOfImage(imagePath);
+        String encodedImage = encode(image);
         biography.getIdentification().getPhoto().setData(encodedImage);
-
         repository.save(biography);
         return converter.toJsonObject(biography);
     }
 
+    public void toDesiredFileFormat(Long id, String format) throws BiographyNotFoundException, WrongFormatException {
+        if (!availableFormats.contains(format)) {
+            throw new WrongFormatException("The format you've entered is not available! Available formats are "
+                    + String.join(", ", availableFormats) + ".");
+        }
+        final String uri = BASE_URL + format;
+        Biography request = findById(id);
+        byte[] response = getResponseFromEuropassApi(uri, request);
+        if ("word".equals(format)) {
+            format = "doc";
+        }
+        writeBiographyToFile(response, createFileName(request), format);
+    }
 
-    public void biographyToPdf(Long id) throws BiographyNotFoundException {
-        final String uri = "https://europass.cedefop.europa.eu/rest/v1/document/to/pdf-cv";
+    /**
+     * Takes the {@link byte[]} image, given as argument, and returns it's {@link Base64} representation.
+     *
+     * @param image to be encoded.
+     * @return {@link Base64} representation of the {@link byte[]} image.
+     */
+    private String encode(byte[] image) {
+        return Base64.getEncoder().encodeToString(image);
+    }
+
+    /**
+     * Reads an image by {@link String} path, given as argument and returns it as byte[].
+     * If the path is incorrect, a default photo is returned.
+     *
+     * @param imagePath the path of the image.
+     * @return the image converted to byte[], if the image cannot be retrieved from the path, given as argument, a default photo is retrieved.
+     *
+     * @throws IOException if IOException occurs.
+     */
+    private byte[] getBytesOfImage(String imagePath) throws IOException {
+        byte[] imageAsByteArray;
+        try (InputStream inputStream = new URL(imagePath).openStream()) {
+            imageAsByteArray = IOUtils.toByteArray(inputStream);
+        } catch (MalformedURLException exception) {
+            imageAsByteArray = Files.readAllBytes(Paths.get("default-image.jpg"));
+        }
+        return imageAsByteArray;
+    }
+
+    /**
+     * Converts the {@link Biography}, given as argument, to {@link JSONObject}.
+     *
+     * @param biography biography to be converted.
+     * @return the biography, given as argument, to JSONObject
+     */
+    public JSONObject asJsonObject(Biography biography) {
+        return converter.toJsonObject(biography);
+    }
+
+    /**
+     * Makes a {@link org.springframework.http.HttpMethod#POST} request to the URL with the desired request body {@link Biography}.
+     * The URL and the request body are given as arguments.
+     * The request body is a {@link JSONObject} representation of the actual {@link Biography}.
+     *
+     * @param uri the URL to be requested
+     * @param requestBiography the biography to be send as {@link org.springframework.web.bind.annotation.RequestBody}
+     * @return {@link byte[]} representation of a file.
+     */
+    private byte[] getResponseFromEuropassApi(String uri, Biography requestBiography) {
         RestTemplate restTemplate = new RestTemplate();
-        byte[] response = restTemplate.postForObject(uri, findById(id), byte[].class);
+        return restTemplate.postForObject(uri, asJsonObject(requestBiography), byte[].class);
+    }
 
-        assert response != null;
-        try (FileOutputStream outputStream = new FileOutputStream("cv.pdf")) {
-            outputStream.write(response);
+    /**
+     * Writes the {@link byte[]}, given as argument, to a file.
+     * The file's name and extension are also given as arguments.
+     *
+     * @param input the source to be written
+     * @param fileName the name of the file
+     * @param fileExtension the extension of the file
+     */
+    private void writeBiographyToFile(byte[] input, String fileName, String fileExtension) {
+        try (FileOutputStream outputStream = new FileOutputStream(fileName + "." + fileExtension)) {
+            outputStream.write(input);
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.warn(e.getMessage());
         }
     }
 
-    public void biographyToWord(Long id) throws BiographyNotFoundException {
-        final String uri = "https://europass.cedefop.europa.eu/rest/v1/document/to/word";
-        RestTemplate restTemplate = new RestTemplate();
-        byte[] response = restTemplate.postForObject(uri, findById(id), byte[].class);
-
-        assert response != null;
-        try (FileOutputStream outputStream = new FileOutputStream("cv.doc")) {
-            outputStream.write(response);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    /**
+     * Creates a {@link String}, composed of {@link Biography}s first and last name, and also the id of the biography(for uniqueness).
+     * The return value of this method will later be used for file naming.
+     *
+     * @param biography biography for which the file name will be created.
+     */
+    private String createFileName(Biography biography) {
+        return biography.getIdentification().getPersonName().toString() +
+                biography.getId();
     }
+
+
 }
