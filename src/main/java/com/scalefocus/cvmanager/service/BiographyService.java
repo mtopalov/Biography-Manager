@@ -31,9 +31,7 @@ import java.util.stream.Collectors;
 @Service
 public class BiographyService {
 
-    private static final Logger logger = LoggerFactory.getLogger(BiographyService.class);
-
-    private static final String BASE_URL = "https://europass.cedefop.europa.eu/rest/v1/document/to/";
+    private final Logger logger = LoggerFactory.getLogger(BiographyService.class);
 
     private final List<String> availableFormats = Arrays.asList("word", "xml", "pdf");
 
@@ -105,6 +103,7 @@ public class BiographyService {
             throw new WrongFormatException("The format you've entered is not available! Available formats are "
                     + String.join(", ", availableFormats) + ".");
         }
+        String BASE_URL = "https://europass.cedefop.europa.eu/rest/v1/document/to/";
         final String uri = BASE_URL + format;
         Biography request = findById(id);
         byte[] response = getResponseFromEuropassApi(uri, request);
@@ -158,7 +157,7 @@ public class BiographyService {
      * The URL and the request body are given as arguments.
      * The request body is a {@link JSONObject} representation of the actual {@link Biography}.
      *
-     * @param uri the URL to be requested
+     * @param uri              the URL to be requested
      * @param requestBiography the biography to be send as {@link org.springframework.web.bind.annotation.RequestBody}
      * @return {@link byte[]} representation of a file.
      */
@@ -171,8 +170,8 @@ public class BiographyService {
      * Writes the {@link byte[]}, given as argument, to a file.
      * The file's name and extension are also given as arguments.
      *
-     * @param input the source to be written
-     * @param fileName the name of the file
+     * @param input         the source to be written
+     * @param fileName      the name of the file
      * @param fileExtension the extension of the file
      */
     private void writeBiographyToFile(byte[] input, String fileName, String fileExtension) {

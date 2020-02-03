@@ -12,7 +12,6 @@ import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -22,9 +21,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 /**
  * @author mariyan.topalov
@@ -46,8 +43,6 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
         if (jwtRequest.isPresent()) {
             authenticationToken = new UsernamePasswordAuthenticationToken(jwtRequest.get().getUsername(), jwtRequest.get().getPassword());
         }
-
-
         return authenticationManager.authenticate(authenticationToken);
     }
 
@@ -58,21 +53,13 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
         User user = ((User) authentication.getPrincipal());
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime expiresIn = now.plusSeconds(3600);
-        List<String> roles = user.getAuthorities()
-                .stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.toList());
-
 
         String token = Jwts.builder()
                 .signWith(Keys.hmacShaKeyFor(signingKey), SignatureAlgorithm.HS512)
                 .setHeaderParam("type", SecurityConstants.TOKEN_TYPE)
-                .setIssuer(SecurityConstants.TOKEN_ISSUER)
-                .setAudience(SecurityConstants.TOKEN_AUDIENCE)
                 .setSubject(user.getUsername())
                 .setIssuedAt(DateUtils.asDate(now))
                 .setExpiration(DateUtils.asDate(expiresIn))
-                .claim("roles", roles)
                 .compact();
 
         JwtResponse jwtResponse = new JwtResponse(token, SecurityConstants.TOKEN_PREFIX.trim(), expiresIn);

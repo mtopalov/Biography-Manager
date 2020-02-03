@@ -28,16 +28,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     @Override
     public void configure(AuthenticationManagerBuilder auth) throws Exception {
         //TODO do a dummy implementation with millions of users
-        //TODO fix password somehow
-        auth.inMemoryAuthentication()
-                .withUser("mariyan")
-                .password(encoder.encode("mariyan"))
-                .roles("USER", "ADMIN")
-            .and()
-                .withUser("user")
-                .password(encoder.encode("password"))
-                .roles("USER");
-        //.userDetailsService(userDetailsService).passwordEncoder(encoder);
+        auth
+                .userDetailsService(userDetailsService)
+                .passwordEncoder(encoder);
     }
 
     @Override
@@ -45,12 +38,13 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         http
                 .csrf().disable()
                 .authorizeRequests()
-                .antMatchers(HttpMethod.GET, "/biographies/**").hasRole("USER")
-                .antMatchers(HttpMethod.POST, "/biographies/**").hasRole("ADMIN")
+                .antMatchers(HttpMethod.POST, "/register/").permitAll()
+                .antMatchers(HttpMethod.GET, "/biographies/**").hasAuthority(Authority.USER.name())
+                .antMatchers(HttpMethod.POST, "/biographies/**").hasAuthority(Authority.ADMIN.name())
                 .anyRequest().authenticated()
                 .and()
                 .addFilter(new JwtAuthenticationFilter(authenticationManager()))
-                .addFilter(new JwtAuthorizationFilter(authenticationManager()))
+                .addFilterAfter(new JwtAuthorizationFilter(userDetailsService), JwtAuthenticationFilter.class)
                 .sessionManagement()
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS);
     }

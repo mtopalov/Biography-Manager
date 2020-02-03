@@ -2,6 +2,8 @@ package com.scalefocus.cvmanager.controller.advice;
 
 import com.scalefocus.cvmanager.exception.BadRequestException;
 import com.scalefocus.cvmanager.exception.BiographyNotFoundException;
+import com.scalefocus.cvmanager.exception.MissingCredentialsException;
+import com.scalefocus.cvmanager.exception.UsernameExistsException;
 import com.scalefocus.cvmanager.exception.WrongFormatException;
 import com.scalefocus.cvmanager.model.error.BaseErrorResponse;
 import org.springframework.http.HttpStatus;
@@ -54,7 +56,7 @@ public class BiographyExceptionHandler {
         String message = "Validation failed for: " + ex.getConstraintViolations().stream()
                 .map(constraintViolation -> constraintViolation.getRootBeanClass().getSimpleName())
                 .distinct()
-                .reduce("", (a, b) -> a + b);
+                .reduce("", (currentState, newError) -> currentState + newError);
 
         BaseErrorResponse response = new BaseErrorResponse(timestamp, HttpStatus.BAD_REQUEST, message, errors);
         return new ResponseEntity<>(response, response.getStatus());
@@ -91,9 +93,23 @@ public class BiographyExceptionHandler {
     }
 
     @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<Object> handleAccessDeniedException(AccessDeniedException ex) {
+    public ResponseEntity<Object> handleAccessDenied(AccessDeniedException ex) {
         String message = ex.getMessage();
         BaseErrorResponse response = new BaseErrorResponse(timestamp, HttpStatus.FORBIDDEN, message, message);
         return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
+    }
+
+    @ExceptionHandler(UsernameExistsException.class)
+    public ResponseEntity<Object> handleUsernameExists(UsernameExistsException ex) {
+        String message = ex.getMessage();
+        BaseErrorResponse response = new BaseErrorResponse(timestamp, HttpStatus.BAD_REQUEST, message, message);
+        return new ResponseEntity<>(response, response.getStatus());
+    }
+
+    @ExceptionHandler(MissingCredentialsException.class)
+    public ResponseEntity<Object> handleMissingCredentials(MissingCredentialsException ex) {
+        String message = ex.getMessage();
+        BaseErrorResponse response = new BaseErrorResponse(timestamp, HttpStatus.BAD_REQUEST, message, message);
+        return new ResponseEntity<>(response, response.getStatus());
     }
 }
