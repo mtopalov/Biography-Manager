@@ -6,6 +6,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 /**
+ * Configuration class for simple beans.
+ *
  * @author Mariyan Topalov
  */
 @Configuration
@@ -15,5 +17,4 @@ public class Config {
     public PasswordEncoder encoder() {
         return new BCryptPasswordEncoder();
     }
-
 }

@@ -1,6 +1,8 @@
 package com.scalefocus.cvmanager.config.security;
 
 /**
+ * Constants which are used for the Security of the project.
+ *
  * @author mariyan.topalov
  */
 public final class SecurityConstants {
@@ -15,7 +17,10 @@ public final class SecurityConstants {
 
     public static final String TOKEN_TYPE = "JWT";
 
+    /**
+     * This class must never be instantiated.
+     */
     private SecurityConstants() {
-        throw new IllegalStateException("Cannot create instance of static util class");
+        throw new AssertionError();
     }
 }

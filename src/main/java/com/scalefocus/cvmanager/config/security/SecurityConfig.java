@@ -10,6 +10,8 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 /**
+ * Configures the web security.
+ *
  * @author mariyan.topalov
  */
 @EnableWebSecurity
@@ -24,19 +26,29 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         this.encoder = encoder;
     }
 
-
+    /**
+     * Configures the Authentication manager.
+     * In this implementation, the authentication manager will work with custom {@link org.springframework.security.core.userdetails.UserDetailsService}.
+     *
+     * @param auth the authentication manager
+     * @throws Exception if exception is raided.
+     */
     @Override
     public void configure(AuthenticationManagerBuilder auth) throws Exception {
-        //TODO do a dummy implementation with millions of users
         auth
                 .userDetailsService(userDetailsService)
                 .passwordEncoder(encoder);
     }
 
+    /**
+     * Configures the {@link HttpSecurity}.
+     *
+     * @param http the http security to be configured.
+     * @throws Exception if exception is raised when configuring the http security.
+     */
     @Override
     protected void configure(HttpSecurity http) throws Exception {
-        http
-                .csrf().disable()
+        http.csrf().disable()
                 .authorizeRequests()
                 .antMatchers(HttpMethod.POST, "/register/").permitAll()
                 .antMatchers(HttpMethod.GET, "/biographies/**").hasAuthority(Authority.USER.name())

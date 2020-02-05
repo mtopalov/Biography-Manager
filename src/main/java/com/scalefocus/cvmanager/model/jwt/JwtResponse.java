@@ -6,6 +6,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 /**
+ * Serves as JWT(Json Web Token) holder.
+ *
  * @author Mariyan Topalov
  */
 public final class JwtResponse {

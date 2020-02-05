@@ -23,17 +23,22 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
+ * Service that handles any manipulation of {@link Biography}. Either it is a database CRUD or any other operation.
+ * Also does requests to "Europass REST API".
+ *
  * @author Mariyan Topalov
  */
 @Service
 public class BiographyService {
 
-    private final Logger logger = LoggerFactory.getLogger(BiographyService.class);
+    /**
+     * List of supported formats.
+     */
+    private final List<String> supportedFormats = Arrays.asList("word", "xml", "pdf");
 
-    private final List<String> availableFormats = Arrays.asList("word", "xml", "pdf");
+    private final Logger logger = LoggerFactory.getLogger(BiographyService.class);
 
     private final BiographyRepository repository;
 
@@ -45,19 +50,6 @@ public class BiographyService {
     }
 
     //GET MAPPINGS
-
-    /**
-     * Retrieves all {@link Biography} records from the database, converts them to {@link JSONObject}, using the {@link EuroPassConverter}
-     * and returns them as {@link List}.
-     *
-     * @return all {@link Biography} records from the database, converted from {@code List<Biography>} to {@code List<JSONObject>}.
-     */
-    public List<JSONObject> findAll() {
-        List<Biography> biographies = repository.findAll();
-        return biographies.stream()
-                .map(converter::toJsonObject)
-                .collect(Collectors.toList());
-    }
 
     /**
      * Finds the {@link Biography} that corresponds to the given {@link Long} id, given as parameter, and returns it as {@link JSONObject}.
@@ -88,7 +80,14 @@ public class BiographyService {
         }
     }
 
-    //POST MAPPINGS
+    /**
+     * Saves the given {@link Biography} to the database.
+     *
+     * @param biography the biography to be saved.
+     * @return saved biography as JsonObject
+     *
+     * @throws IOException if IOException occurs.
+     */
     public JSONObject save(Biography biography) throws IOException {
         String imagePath = biography.getIdentification().getPhoto().getData();
         byte[] image = getBytesOfImage(imagePath);
@@ -98,19 +97,39 @@ public class BiographyService {
         return converter.toJsonObject(biography);
     }
 
-    public void toDesiredFileFormat(Long id, String format) throws BiographyNotFoundException, WrongFormatException {
-        if (!availableFormats.contains(format)) {
+    /**
+     * Gets the {@link Biography} from the database, by given id as argument.
+     * Makes a request to "Europass REST API" with the biography and the given format.
+     * If the biography, given as request body, is valid and the format is one of the supported formats, a response from the "Europass REST API" will be returned.
+     * The returned response will be written to a file, in the project directory. The file format is based on the argument format.
+     *
+     * @param id     the id of the Biography.
+     * @param format the desired file format.
+     * @throws BiographyNotFoundException if biography with the given ID does not exist.
+     * @throws WrongFormatException       if the chosen format is not supported.
+     */
+    public void convertToDesiredFileFormat(Long id, String format) throws BiographyNotFoundException, WrongFormatException {
+        if (isValid(format)) {
             throw new WrongFormatException("The format you've entered is not available! Available formats are "
-                    + String.join(", ", availableFormats) + ".");
+                    + String.join(", ", supportedFormats) + ".");
         }
         String BASE_URL = "https://europass.cedefop.europa.eu/rest/v1/document/to/";
-        final String uri = BASE_URL + format;
-        Biography request = findById(id);
-        byte[] response = getResponseFromEuropassApi(uri, request);
+        String uri = BASE_URL + format;
+        Biography requestBody = findById(id);
+        byte[] response = getResponseFromEuropassApi(uri, requestBody);
         if ("word".equals(format)) {
             format = "doc";
         }
-        writeBiographyToFile(response, createFileName(request), format);
+        writeBiographyToFile(response, createFileName(requestBody), format);
+    }
+
+    /**
+     * Returns true if the {@link String} format, given as argument, is a supported format.
+     *
+     * @param format to be verified.
+     */
+    private boolean isValid(String format) {
+        return supportedFormats.contains(format);
     }
 
     /**
@@ -137,6 +156,7 @@ public class BiographyService {
         try (InputStream inputStream = new URL(imagePath).openStream()) {
             imageAsByteArray = IOUtils.toByteArray(inputStream);
         } catch (MalformedURLException exception) {
+            //if the url is not fine, a default image will be loaded
             imageAsByteArray = Files.readAllBytes(Paths.get("default-image.jpg"));
         }
         return imageAsByteArray;
@@ -178,7 +198,7 @@ public class BiographyService {
         try (FileOutputStream outputStream = new FileOutputStream(fileName + "." + fileExtension)) {
             outputStream.write(input);
         } catch (IOException e) {
-            logger.warn(e.getMessage());
+            logger.error(e.getMessage());
         }
     }
 
@@ -192,6 +212,4 @@ public class BiographyService {
         return biography.getIdentification().getPersonName().toString() +
                 biography.getId();
     }
-
-
 }

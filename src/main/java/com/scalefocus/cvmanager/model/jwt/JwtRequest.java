@@ -1,6 +1,8 @@
 package com.scalefocus.cvmanager.model.jwt;
 
 /**
+ * Holder for username and password.
+ *
  * @author Mariyan Topalov
  */
 public final class JwtRequest {

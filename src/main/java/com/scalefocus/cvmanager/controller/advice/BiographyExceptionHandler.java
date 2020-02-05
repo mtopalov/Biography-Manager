@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
+ * Controller advice which handles the exceptions, raised by {@link com.scalefocus.cvmanager.controller.BiographyController} and outputs a client friendly message.
+ *
  * @author Mariyan Topalov
  */
 @ControllerAdvice

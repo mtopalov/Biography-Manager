@@ -11,6 +11,8 @@ import java.util.Collections;
 import java.util.List;
 
 /**
+ * Entity for storing Users in the database.
+ *
  * @author Mariyan Topalov
  */
 @Entity
